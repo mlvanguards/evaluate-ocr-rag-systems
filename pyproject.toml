@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "ocr-rag-systems"
+version = "0.1.0"
+description = ""
+authors = ["Vesa Alex"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+torch = "^2.5.1"
+surya-ocr = "^0.8.1"
+numpy = "1.26.4"
+pytesseract = "^0.3.13"
+easyocr = "^1.7.2"
+paddleocr = "^2.9.1"
+python-doctr = "^0.10.0"
+pdf2image = "^1.17.0"
+pandas = "^2.2.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
