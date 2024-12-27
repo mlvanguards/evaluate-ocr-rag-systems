@@ -1,0 +1,6 @@
+vespa:
+  app_name: "test2"
+  tenant_name: "cube-digital"
+  connections: 1
+  timeout: 180
+  schema_name: "pdf_page"
