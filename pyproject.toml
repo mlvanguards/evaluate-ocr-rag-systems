@@ -16,6 +16,16 @@ paddleocr = "^2.9.1"
 python-doctr = "^0.10.0"
 pdf2image = "^1.17.0"
 pandas = "^2.2.3"
+ollama = "^0.4.4"
+together = "^1.3.10"
+colpali-engine = "0.3.1"
+vidore-benchmark = "4.0.0"
+google-generativeai = "^0.8.3"
+pypdf = "5.0.1"
+pyvespa = "^0.51.0"
+vespacli = "^8.453.24"
+requests = "^2.32.3"
+ipython = "^8.31.0"
 
 
 [build-system]

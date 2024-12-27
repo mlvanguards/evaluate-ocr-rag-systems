@@ -1,0 +1,85 @@
+schema pdf_page {
+    document pdf_page {
+        field id type string {
+            indexing: summary | index
+            match {
+                word
+            }
+        }
+        field url type string {
+            indexing: summary | index
+        }
+        field title type string {
+            indexing: summary | index
+            index: enable-bm25
+            match {
+                text
+            }
+        }
+        field page_number type int {
+            indexing: summary | attribute
+        }
+        field image type raw {
+            indexing: summary
+        }
+        field text type string {
+            indexing: index
+            index: enable-bm25
+            match {
+                text
+            }
+        }
+        field embedding type tensor<int8>(patch{}, v[16]) {
+            indexing: attribute | index
+            attribute {
+                distance-metric: hamming
+            }
+            index {
+                hnsw {
+                    max-links-per-node: 32
+                    neighbors-to-explore-at-insert: 400
+                }
+            }
+        }
+    }
+    fieldset default {
+        fields: title, text
+    }
+    rank-profile default {
+        inputs {
+            query(qt) tensor<float>(querytoken{}, v[128])             
+        
+        }
+        function max_sim() {
+            expression {
+                
+                                        sum(
+                                            reduce(
+                                                sum(
+                                                    query(qt) * unpack_bits(attribute(embedding)) , v
+                                                ),
+                                                max, patch
+                                            ),
+                                            querytoken
+                                        )
+                                    
+            }
+        }
+        function bm25_score() {
+            expression {
+                bm25(title) + bm25(text)
+            }
+        }
+        first-phase {
+            expression {
+                bm25_score
+            }
+        }
+        second-phase {
+            rerank-count: 100
+            expression {
+                max_sim
+            }
+        }
+    }
+}
