@@ -2,7 +2,6 @@ import logging
 import os
 import platform
 import tempfile
-from dataclasses import dataclass
 from io import BytesIO
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -17,28 +16,14 @@ from torch import device as torch_device
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from src.ocr_benchmark.engines.vespa.datatypes import PDFData
+from src.ocr_benchmark.engines.vespa.exceptions import PDFProcessingError
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class PDFData:
-    """Data class to store processed PDF information."""
-
-    url: str
-    title: str
-    images: List[Any]  # PIL.Image type
-    texts: List[str]
-    embeddings: List[Tensor]
-
-
-class PDFProcessingError(Exception):
-    """Custom exception for PDF processing errors."""
-
-    pass
 
 
 class PDFProcessor:

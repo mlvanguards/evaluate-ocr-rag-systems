@@ -1,5 +1,4 @@
 import logging
-from dataclasses import dataclass
 from pathlib import Path
 from time import time
 from typing import Any, Dict, List, Optional
@@ -9,8 +8,9 @@ from tqdm import tqdm
 from vespa.application import Vespa
 from vespa.deployment import VespaCloud
 
+from src.ocr_benchmark.engines.vespa.datatypes import PDFInput, VespaConfig
+from src.ocr_benchmark.engines.vespa.exceptions import VespaDeploymentError
 from src.ocr_benchmark.engines.vespa.indexing.pdf_processor import (
-    PDFProcessingError,
     PDFProcessor,
 )
 from src.ocr_benchmark.engines.vespa.indexing.prepare_feed import (
@@ -26,85 +26,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class VespaConfig:
-    """Configuration for Vespa deployment."""
-
-    app_name: str
-    tenant_name: str
-    connections: int = 1
-    timeout: int = 180
-    schema_name: str = "pdf_page"
-
-
-@dataclass
-class PDFInput:
-    """Data class for PDF input information."""
-
-    title: str
-    url: str
-
-
-class VespaDeploymentError(Exception):
-    """Custom exception for Vespa deployment errors."""
-
-    pass
-
-
 class VespaDeployer:
-    """Class for handling Vespa Cloud deployment and data feeding."""
-
     def __init__(
         self,
         config: VespaConfig,
         pdf_processor: Optional[PDFProcessor] = None,
         feed_preparator: Optional[VespaFeedPreparator] = None,
     ) -> None:
-        """
-        Initialize VespaDeployer with configuration and processors.
-
-        Args:
-            config: VespaConfig object containing deployment settings
-            pdf_processor: Optional PDFProcessor instance
-            feed_preparator: Optional VespaFeedPreparator instance
-        """
+        """Initialize VespaDeployer with configuration and processors."""
         self.config = config
         self.pdf_processor = pdf_processor or PDFProcessor()
         self.feed_preparator = feed_preparator or VespaFeedPreparator()
-
-    async def deploy_and_feed(self, vespa_feed: List[PDFPage]) -> Vespa:
-        """
-        Deploy application to Vespa Cloud and feed data.
-
-        Args:
-            vespa_feed: List of PDFPage objects to be indexed
-
-        Returns:
-            Deployed Vespa application instance
-
-        Raises:
-            VespaDeploymentError: If deployment or feeding fails
-        """
-        try:
-            logger.info("Setting up Vespa deployment")
-            vespa_setup = VespaSetup(self.config.app_name)
-
-            vespa_cloud = VespaCloud(
-                tenant=self.config.tenant_name,
-                application=self.config.app_name,
-                application_package=vespa_setup.app_package,
-            )
-
-            logger.info("Deploying to Vespa Cloud")
-            app = vespa_cloud.deploy()
-
-            await self._feed_data(app, vespa_feed)
-
-            return app
-
-        except Exception as e:
-            logger.error(f"Vespa deployment failed: {str(e)}")
-            raise VespaDeploymentError(f"Deployment failed: {str(e)}")
 
     async def _feed_data(self, app: Vespa, vespa_feed: List[PDFPage]) -> None:
         """
@@ -160,12 +92,36 @@ class VespaDeployer:
         output_dir = Path("logs/failed_documents")
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        output_file = output_dir / f"failed_documents_{int(time.time())}.yaml"
+        output_file = output_dir / f"failed_documents_{int(time())}.yaml"
 
         with open(output_file, "w") as f:
             yaml.dump(failed_docs, f)
 
         logger.info(f"Failed documents information saved to {output_file}")
+
+    async def deploy_and_feed(self, vespa_feed: List[PDFPage]) -> Vespa:
+        """Deploy application to Vespa Cloud and feed data."""
+        try:
+            logger.info("Setting up Vespa deployment")
+            vespa_setup = VespaSetup(
+                app_name=self.config.app_name, schema_config=self.config.schema_config
+            )
+
+            vespa_cloud = VespaCloud(
+                tenant=self.config.tenant_name,
+                application=self.config.app_name,
+                application_package=vespa_setup.app_package,
+            )
+
+            logger.info("Deploying to Vespa Cloud")
+            app = vespa_cloud.deploy()
+
+            await self._feed_data(app, vespa_feed)
+            return app
+
+        except Exception as e:
+            logger.error(f"Vespa deployment failed: {str(e)}")
+            raise VespaDeploymentError(f"Deployment failed: {str(e)}")
 
 
 async def run_indexing(
@@ -176,18 +132,6 @@ async def run_indexing(
 ) -> None:
     """
     Run the indexing process for a given list of PDFs.
-
-    Args:
-        config_path: Path to Vespa configuration file
-        pdfs: List of PDFInput objects containing PDF information
-        pdf_processor: Optional custom PDFProcessor instance
-        feed_preparator: Optional custom VespaFeedPreparator instance
-
-    Raises:
-        FileNotFoundError: If configuration file is not found
-        PDFProcessingError: If PDF processing fails
-        VespaDeploymentError: If Vespa deployment or feeding fails
-        ValueError: If input parameters are invalid
     """
     try:
         # Validate inputs
@@ -206,61 +150,43 @@ async def run_indexing(
         if not config_data.get("vespa"):
             raise ValueError("Invalid configuration: 'vespa' section missing")
 
-        vespa_config = VespaConfig(**config_data["vespa"])
+        # Use the new from_dict method to create config
+        vespa_config = VespaConfig.from_dict(config_data["vespa"])
 
-        # Initialize processors if not provided
-        pdf_processor = pdf_processor or PDFProcessor()
-        feed_preparator = feed_preparator or VespaFeedPreparator()
-        deployer = VespaDeployer(vespa_config, pdf_processor, feed_preparator)
+        # Initialize processors
+        if pdf_processor is None:
+            pdf_processor = PDFProcessor()
 
-        # Convert PDFInput objects to dictionary format
-        pdf_data = [{"title": pdf.title, "url": pdf.url} for pdf in pdfs]
+        if feed_preparator is None:
+            feed_preparator = VespaFeedPreparator()
+
+        # Create deployer
+        deployer = VespaDeployer(
+            config=vespa_config,
+            pdf_processor=pdf_processor,
+            feed_preparator=feed_preparator,
+        )
 
         # Process PDFs
+        pdf_data = [{"title": pdf.title, "url": pdf.url} for pdf in pdfs]
+
         logger.info(f"Processing {len(pdfs)} PDFs")
         processed_data = pdf_processor.process_pdf(pdf_data)
 
-        # Prepare Vespa feed
+        if not processed_data:
+            raise ValueError("No data processed from PDFs")
+
         logger.info("Preparing Vespa feed")
         vespa_feed = feed_preparator.prepare_feed(processed_data)
 
-        # Deploy and feed data
+        if not vespa_feed:
+            raise ValueError("No feed data prepared")
+
         logger.info("Starting deployment and feeding process")
         await deployer.deploy_and_feed(vespa_feed)
 
         logger.info("Indexing process completed successfully")
 
-    except FileNotFoundError as e:
-        logger.error(f"Configuration file error: {str(e)}")
-        raise
-    except ValueError as e:
-        logger.error(f"Input validation error: {str(e)}")
-        raise
-    except (PDFProcessingError, VespaDeploymentError) as e:
-        logger.error(f"Processing error: {str(e)}")
-        raise
     except Exception as e:
-        logger.error(f"Unexpected error during indexing: {str(e)}")
-        raise
-
-
-# Example usage:
-async def index_documents():
-    """Example function showing how to use run_indexing."""
-    config_path = "vespa_config.yaml"
-
-    pdfs = [
-        PDFInput(
-            title="Building a Resilient Strategy",
-            url="https://example.com/document1.pdf",
-        ),
-        PDFInput(
-            title="Energy Transition Report", url="https://example.com/document2.pdf"
-        ),
-    ]
-
-    try:
-        await run_indexing(config_path, pdfs)
-    except Exception as e:
-        logger.error(f"Failed to index documents: {str(e)}")
+        logger.error(f"Indexing failed: {str(e)}")
         raise

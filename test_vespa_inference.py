@@ -13,8 +13,8 @@ async def main():
 
     try:
         await run_queries(config_path, queries)
-    except Exception as e:
-        print(e)
+    except Exception:
+        print("sss")
         raise
 
 

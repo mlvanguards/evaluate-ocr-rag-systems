@@ -1,10 +1,14 @@
 vespa:
-  app_name: "test2"
   tenant_name: "cube-digital"
+  app_name: "test3"
+  schema_name: "pdf_page"
   connections: 1
   timeout: 180
-  schema_name: "pdf_page"
-  hits_per_query: 5
   query_timeout: 120
-
-
+  hits_per_query: 5
+  schema:
+    max_query_terms: 64
+    hnsw_max_links: 32
+    hnsw_neighbors: 400
+    rerank_count: 10
+    tensor_dimensions: 16
