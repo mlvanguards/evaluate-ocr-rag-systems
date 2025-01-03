@@ -26,6 +26,7 @@ pyvespa = "^0.51.0"
 vespacli = "^8.453.24"
 requests = "^2.32.3"
 ipython = "^8.31.0"
+pymupdf = "^1.25.1"
 
 
 [build-system]

@@ -24,6 +24,17 @@ class PDFData:
 
 
 @dataclass
+class PDFPage:
+    id: str
+    url: str
+    title: str
+    page_number: int
+    image: str
+    text: str
+    embedding: Dict[int, str]
+
+
+@dataclass
 class VespaSchemaConfig:
     """Configuration for Vespa schema settings."""
 
@@ -70,35 +81,21 @@ class VespaConfig:
 
 @dataclass
 class VespaQueryConfig:
-    """Configuration for Vespa queries."""
-
     app_name: str
     tenant_name: str
     connections: int = 1
     timeout: int = 180
-    query_timeout: int = 120
     hits_per_query: int = 5
     schema_name: str = "pdf_page"
+    tensor_dimensions: int = 16  # Added this field
     schema_config: Optional[VespaSchemaConfig] = None
 
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> "VespaQueryConfig":
-        """
-        Create VespaQueryConfig from dictionary, handling schema config separately.
-
-        Args:
-            config_dict: Dictionary containing configuration values
-
-        Returns:
-            VespaQueryConfig instance
-        """
-        # Extract and convert schema config if present
         schema_dict = config_dict.pop("schema", {})
         schema_config = (
             VespaSchemaConfig.from_dict(schema_dict) if schema_dict else None
         )
-
-        # Convert remaining config
         return cls(
             **{k: v for k, v in config_dict.items() if k != "schema"},
             schema_config=schema_config,

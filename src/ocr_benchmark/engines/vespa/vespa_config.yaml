@@ -1,14 +1,29 @@
+# vespa:
+#   tenant_name: "cube-digital"
+#   app_name: "test4"
+#   schema_name: "pdf_page"
+#   connections: 1
+#   timeout: 180
+#   hits_per_query: 5
+#   schema:
+#     max_query_terms: 64
+#     hnsw_max_links: 32
+#     hnsw_neighbors: 400
+#     rerank_count: 10
+#     tensor_dimensions: 16
+
+
+
 vespa:
+  app_name: "test4"
   tenant_name: "cube-digital"
-  app_name: "test3"
-  schema_name: "pdf_page"
   connections: 1
   timeout: 180
-  query_timeout: 120
   hits_per_query: 5
+  schema_name: "pdf_page"
+  tensor_dimensions: 16
   schema:
     max_query_terms: 64
     hnsw_max_links: 32
     hnsw_neighbors: 400
     rerank_count: 10
-    tensor_dimensions: 16

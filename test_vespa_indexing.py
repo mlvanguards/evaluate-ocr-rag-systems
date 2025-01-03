@@ -9,19 +9,19 @@ async def index_documents():
     """Example function showing how to use run_indexing."""
     config_path = "/Users/vesaalexandru/Workspaces/cube/cube-publication/evaluate-ocr-rag-systems/src/ocr_benchmark/engines/vespa/vespa_config.yaml"
 
-    # pdfs = [
-    #     PDFInput(
-    #         title="Building a Resilient Strategy",
-    #         url="https://static.conocophillips.com/files/resources/24-0976-sustainability-highlights_nature.pdf",
-    #     )
-    # ]
-
     pdfs = [
         PDFInput(
             title="Building a Resilient Strategy",
-            url="https://static.conocophillips.com/files/resources/conocophillips-2023-managing-climate-related-risks.pdf",
+            url="https://static.conocophillips.com/files/resources/24-0976-sustainability-highlights_nature.pdf",
         )
     ]
+
+    # pdfs = [
+    #     PDFInput(
+    #         title="Building a Resilient Strategy",
+    #         url="https://static.conocophillips.com/files/resources/conocophillips-2023-managing-climate-related-risks.pdf",
+    #     )
+    # ]
 
     # Explicitly create the processors
     pdf_processor = PDFProcessor()

@@ -1,0 +1,7 @@
+- error:
+    message: 'No field ''images'' in the structure of type ''pdf_page'', which has
+      the fields: [field ''id'' of type string, field ''url'' of type string, field
+      ''title'' of type string, field ''page_number'' of type int, field ''image''
+      of type raw, field ''text'' of type string, field ''embedding'' of type tensor<int8>(patch{},v[16])]'
+    pathId: /document/v1/pdf_page/pdf_page/docid/https%3A/static.conocophillips.com/files/resources/24-0976-sustainability-highlights_nature.pdf
+  id: https://static.conocophillips.com/files/resources/24-0976-sustainability-highlights_nature.pdf
