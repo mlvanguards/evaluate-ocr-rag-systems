@@ -15,8 +15,8 @@
 
 
 vespa:
-  app_name: "test4"
-  tenant_name: "cube-digital"
+  app_name: "test"
+  tenant_name: "ml-vanguards"
   connections: 1
   timeout: 180
   hits_per_query: 5

@@ -50,7 +50,6 @@ class PDFEmbeddingDecider:
             # Enhanced decision logic incorporating table analysis
             table_score = results["table"].score
 
-            # If document is heavily tabular, prefer Traditional embedding
             if table_score > 0:
                 table_influence = min(1.0, table_score * self.config.table_weight)
                 adjusted_density_threshold = self.config.text_density_threshold * (

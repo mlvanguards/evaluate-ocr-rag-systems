@@ -1,6 +1,8 @@
 import logging
 from typing import List, Optional
 
+from src.vespa.datatypes import VespaSchemaConfig
+from src.vespa.exceptions import VespaSetupError
 from vespa.package import (
     HNSW,
     ApplicationPackage,
@@ -13,9 +15,6 @@ from vespa.package import (
     Schema,
     SecondPhaseRanking,
 )
-
-from src.ocr_benchmark.engines.vespa.datatypes import VespaSchemaConfig
-from src.ocr_benchmark.engines.vespa.exceptions import VespaSetupError
 
 # Configure logging
 logging.basicConfig(

@@ -5,17 +5,17 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 from tqdm import tqdm
-from vespa.application import Vespa
-from vespa.deployment import VespaCloud
 
-from src.ocr_benchmark.engines.vespa.datatypes import (
+from src.vespa.datatypes import (
     PDFInput,
     VespaConfig,
     VespaSchemaConfig,
 )
-from src.ocr_benchmark.engines.vespa.indexing.pdf_processor import PDFProcessor
-from src.ocr_benchmark.engines.vespa.indexing.prepare_feed import VespaFeedPreparator
-from src.ocr_benchmark.engines.vespa.setup import VespaSetup
+from src.vespa.indexing.pdf_processor import PDFProcessor
+from src.vespa.indexing.prepare_feed import VespaFeedPreparator
+from src.vespa.setup import VespaSetup
+from vespa.application import Vespa
+from vespa.deployment import VespaCloud
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -43,9 +43,6 @@ class VespaDeployer:
             for doc in tqdm(vespa_feed, desc="Feeding documents"):
                 try:
                     logger.debug(f"Feeding document: {doc['fields']['url']}")
-
-                    print("TYPE", type(doc))
-                    print("FIELDS", doc["fields"])
 
                     response = await session.feed_data_point(
                         schema=self.config.schema_name,

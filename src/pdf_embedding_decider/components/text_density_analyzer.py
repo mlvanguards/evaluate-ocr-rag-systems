@@ -1,6 +1,6 @@
 import fitz
 
-from src.pdf_embedding_decider.analyzer import PDFAnalyzer
+from pdf_embedding_decider.interfaces import PDFAnalyzer
 from src.pdf_embedding_decider.datatypes import AnalysisConfig, AnalysisResult
 
 

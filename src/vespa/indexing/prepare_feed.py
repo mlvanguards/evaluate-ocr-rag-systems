@@ -9,7 +9,7 @@ import numpy.typing as npt
 from PIL import Image
 from torch import Tensor
 
-from src.ocr_benchmark.engines.vespa.indexing.pdf_processor import PDFData
+from src.vespa.indexing.pdf_processor import PDFData
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)

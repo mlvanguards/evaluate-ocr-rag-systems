@@ -1,18 +1,17 @@
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
-import numpy as np
 import torch
 import yaml
 from colpali_engine.models import ColQwen2, ColQwen2Processor
 from torch.utils.data import DataLoader
+
+from src.vespa.datatypes import QueryResult, VespaQueryConfig
+from src.vespa.exceptions import VespaQueryError
+from src.vespa.setup import VespaSetup
 from vespa.deployment import VespaCloud
 from vespa.io import VespaQueryResponse
-
-from src.ocr_benchmark.engines.vespa.datatypes import QueryResult, VespaQueryConfig
-from src.ocr_benchmark.engines.vespa.exceptions import VespaQueryError
-from src.ocr_benchmark.engines.vespa.setup import VespaSetup
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -50,7 +49,7 @@ class VespaQuerier:
             logger.error(f"Failed to initialize VespaCloud: {str(e)}")
             raise VespaQueryError(f"VespaCloud initialization failed: {str(e)}")
 
-    def _prepare_query_tensors(self, query: str) -> Dict[str, Any]:
+    def _prepare_query_tensors(self, query: str) -> Dict[str, List[float]]:
         dataloader = DataLoader(
             [query],
             batch_size=1,
@@ -64,25 +63,16 @@ class VespaQuerier:
             embeddings_query = self.model(**batch_query)
             query_embedding = embeddings_query[0].cpu().float()
 
-        query_tensors = {
-            "input.query(qt)": {k: v.tolist() for k, v in enumerate(query_embedding)},
-        }
+        # Convert embedding to list format
+        embedding_list = query_embedding.tolist()
+        if isinstance(embedding_list[0], list):
+            # Handle case where embedding is 2D
+            query_tensors = {i: emb for i, emb in enumerate(embedding_list)}
+        else:
+            # Handle case where embedding is 1D
+            query_tensors = {0: embedding_list}
 
-        # Add binary query tensors for nearest neighbor search
-        binary_query = np.packbits(query_embedding.numpy() > 0, axis=1).astype(np.int8)
-        for i in range(len(binary_query)):
-            query_tensors[f"input.query(rq{i})"] = binary_query[i].tolist()
-
-        return query_tensors
-
-    def _build_query_string(self, query: str) -> str:
-        nn_parts = []
-        target_hits = self.config.hits_per_query * 2
-        for i in range(self.config.tensor_dimensions):
-            nn_parts.append(
-                f"({{targetHits:{target_hits}}}nearestNeighbor(embedding,rq{i}))"
-            )
-        return " OR ".join(nn_parts)
+        return {"input.query(qt)": query_tensors}
 
     async def execute_queries(self, queries: List[str]) -> Dict[str, List[QueryResult]]:
         try:
@@ -97,23 +87,27 @@ class VespaQuerier:
                         logger.info(f"Executing query: {query}")
                         query_tensors = self._prepare_query_tensors(query)
 
+                        logger.debug(f"Query tensors: {query_tensors}")
+
                         response = await session.query(
-                            yql=(
-                                "select id, title, url, text, page_number, image "
-                                f"from pdf_page where {self._build_query_string(query)}"
-                            ),
-                            ranking="default",
+                            yql="select id, title, url, text, page_number, image from pdf_page where userInput(@userQuery)",
+                            userQuery=query,
                             hits=self.config.hits_per_query,
                             body={
                                 **query_tensors,
-                                "ranking.profile": "two-phase",
-                                "ranking.features.query(bm25)": True,
                                 "presentation.timing": True,
+                                "timeout": str(self.config.timeout),
                             },
                         )
 
                         if not response.is_successful():
-                            raise VespaQueryError(f"Query failed: {response.json()}")
+                            error_msg = (
+                                response.get_json()
+                                if hasattr(response, "get_json")
+                                else str(response)
+                            )
+                            logger.error(f"Query response error: {error_msg}")
+                            raise VespaQueryError(f"Query failed: {error_msg}")
 
                         results[query] = self._process_response(response)
 
@@ -128,20 +122,24 @@ class VespaQuerier:
             raise VespaQueryError(f"Query execution failed: {str(e)}")
 
     def _process_response(self, response: VespaQueryResponse) -> List[QueryResult]:
-        results = []
-        for hit in response.hits:
-            fields = hit["fields"]
-            results.append(
-                QueryResult(
-                    title=fields.get("title", "N/A"),
-                    url=fields.get("url", "N/A"),
-                    page_number=fields.get("page_number", -1),
-                    relevance=float(hit.get("relevance", 0.0)),
-                    text=fields.get("text", ""),
-                    source=hit,
+        try:
+            results = []
+            for hit in response.hits:
+                fields = hit["fields"]
+                results.append(
+                    QueryResult(
+                        title=fields.get("title", "N/A"),
+                        url=fields.get("url", "N/A"),
+                        page_number=fields.get("page_number", -1),
+                        relevance=float(hit.get("relevance", 0.0)),
+                        text=fields.get("text", ""),
+                        source=hit,
+                    )
                 )
-            )
-        return results
+            return results
+        except Exception as e:
+            logger.error(f"Error processing response: {str(e)}")
+            return []
 
     def display_results(self, query: str, results: List[QueryResult]) -> None:
         print(f"\nQuery: {query}")
@@ -187,4 +185,51 @@ async def run_queries(
 
     except Exception as e:
         logger.error(f"Failed to run queries: {str(e)}")
+        raise
+
+
+async def main() -> Dict[str, List[QueryResult]]:
+    # Path to your config file
+    config_path = (
+        "/Users/vesaalexandru/Workspaces/cube/cube-publication/"
+        "evaluate-ocr-rag-systems/src/vespa/vespa_config.yaml"
+    )
+
+    # Test queries
+    queries = [
+        "Percentage of non-fresh water as source?",
+    ]
+
+    try:
+        logger.info("Starting query execution")
+        results = await run_queries(
+            config_path=config_path, queries=queries, display_results=True
+        )
+        logger.info("Query execution completed successfully")
+        return results
+
+    except Exception as e:
+        logger.error(f"Query execution failed: {str(e)}")
+        raise
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    try:
+        results = asyncio.run(main())
+
+        # Print summary of results
+        print("\nResults Summary:")
+        for query, query_results in results.items():
+            print(f"\nQuery: {query}")
+            print(f"Number of results: {len(query_results)}")
+            if query_results:
+                print(f"Top result score: {query_results[0].relevance:.4f}")
+                print(f"Top result title: {query_results[0].title}")
+
+    except KeyboardInterrupt:
+        logger.info("Query execution interrupted by user")
+    except Exception as e:
+        logger.error(f"Error occurred: {str(e)}")
         raise

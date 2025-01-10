@@ -16,8 +16,8 @@ from torch import device as torch_device
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from src.ocr_benchmark.engines.vespa.datatypes import PDFData
-from src.ocr_benchmark.engines.vespa.exceptions import PDFProcessingError
+from src.vespa.datatypes import PDFData
+from src.vespa.exceptions import PDFProcessingError
 
 # Configure logging
 logging.basicConfig(

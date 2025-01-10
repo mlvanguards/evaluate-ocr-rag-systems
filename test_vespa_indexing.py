@@ -1,13 +1,14 @@
 import asyncio
 
-from src.ocr_benchmark.engines.vespa.indexing.pdf_processor import PDFProcessor
-from src.ocr_benchmark.engines.vespa.indexing.prepare_feed import VespaFeedPreparator
-from src.ocr_benchmark.engines.vespa.indexing.run import PDFInput, run_indexing
+from src.vespa.datatypes import PDFInput
+from src.vespa.indexing.pdf_processor import PDFProcessor
+from src.vespa.indexing.prepare_feed import VespaFeedPreparator
+from src.vespa.indexing.run import run_indexing
 
 
 async def index_documents():
     """Example function showing how to use run_indexing."""
-    config_path = "/Users/vesaalexandru/Workspaces/cube/cube-publication/evaluate-ocr-rag-systems/src/ocr_benchmark/engines/vespa/vespa_config.yaml"
+    config_path = "/Users/vesaalexandru/Workspaces/cube/cube-publication/evaluate-ocr-rag-systems/src/vespa/vespa_config.yaml"
 
     pdfs = [
         PDFInput(

@@ -3,7 +3,7 @@ from types import Any, Dict
 
 import fitz
 
-from src.pdf_embedding_decider.analyzer import PDFAnalyzer
+from pdf_embedding_decider.interfaces import PDFAnalyzer
 from src.pdf_embedding_decider.datatypes import AnalysisResult
 
 logging.basicConfig(level=logging.INFO)
